@@ -1,0 +1,161 @@
+select database()
+
+use world
+
+select * from city
+where id=939
+
+describe city
+
+select * from country
+
+DESCRIBE country
+
+select * from countrylanguage
+
+--1. Tampilkan 10 kota dengan populasi terbesar beserta nama negaranya, urutkan berdasarkan populasinya dari yang terbesar! 
+select city.name as nama_kota,
+country.name as negara,
+city.population as Population
+from city
+join country
+on city.countrycode=country.code
+ORDER BY country.name DESC, city.population desc 
+limit 200
+
+--2. Tampikan GNP negara Belanda (Netherlands), ibukota, beserta populasi dari ibukotanya!
+select country.name as negara,
+country.gnp as GNP,
+city.name as capital,
+city.population as population
+from country join city
+on country.capital = city.ID
+where country.name="Netherlands"
+
+
+--3. Tampilkan 10 negara yang memiliki persentase pemakai bahasa spanyol paling tinggi!
+select c1.name as negara,
+c2.percentage as persentase
+from country c1 join countrylanguage c2
+on c1.code = c2.countrycode
+where c2.language = 'spanish'
+order by c2.percentage DESC
+limit 10
+
+--4. Tampikan GNP negara Indonesia, ibukota, populasi dari ibukotanya dan bahasa resmi yang dipakai! 
+select c1.name as negara,
+c1.gnp as GNP,
+c2.name as ibukota,
+c2.population as population,
+c3.language as bahasa
+from country c1
+join city c2 on c1.capital = c2.ID
+join countrylanguage c3 on c1.code = c3.countrycode
+where c1.name="Indonesia" and c3.isofficial='T'
+
+
+--SUB QUERY 
+--1. Tampilkan benua dengan jumlah negara lebih dari jumlah negara di benua North America!
+select continent, count(distinct name) as jumlah_negara
+from country
+group by continent
+having count(distinct name)>(select count(distinct name)
+from country
+where continent = 'north america')
+
+--2. Tampilkan negara di Asia dengan GNP di atas rata-rata GNP negara-negara di benua Eropa, diurutkan dari yang terbesar! 
+select name, gnp 
+from country
+where continent = 'asia' AND 
+gnp > (select avg(gnp) from country where  continent = 'europe')
+ORDER by gnp desc
+
+--3. Tampilkan benua berakhiran huruf 'a' dengan jumlah region lebih dari jumlah region benua Asia!
+select count(distinct region) as jumlah_region,
+continent
+from country
+group by continent
+having continent like '%a' and 
+count(distinct region) > (select count(distinct region)
+from country
+where continent ='asia')
+
+
+--18/09/2024
+
+/*1. Tampilkan 10 nama negara (Name) dan jumlah bahasa (language) baik yang official maupun tidak di tiap negara, 
+dari tabel Country dan CountryLanguage! 
+Tampilkan hanya negara yang jumlah bahasanya di atas rata-rata jumlah bahasa tiap negara! 
+Urutkan dari negara yang jumlah bahasanya paling banyak!*/
+with table_bahasa as(
+    select c1.name negara, count(c3.language) jumlah_bahasa 
+    from country c1 join countrylanguage C3
+    on c1.code=c3.countrycode
+    group by c1.name)
+select negara, jumlah_bahasa
+from table_bahasa
+where jumlah_bahasa>(select avg(jumlah_bahasa) from table_bahasa)
+order by 2 desc
+limit 10
+
+/* 2. Tampilkan 10 nama negara (Name), bentuk pemerintahan (GovernmentForm), 
+jumlah population semua negara (Population), persentase populasi tiap negara, 
+serta nomor index baris tiap negara dari tabel Country! */
+with tabel_populasi as(
+    select name negara, population, governmentform bentuk_pemerintahan, 
+    (select sum(population) from country) total_population, ROW_NUMBER() over() no_index
+    from country)
+select t1.negara, t1.bentuk_pemerintahan, (t1.population*100/t1.total_population) as percentage,
+t1.no_index
+from tabel_populasi t1
+order by 3 desc
+limit 10
+
+/* 3. Tampilkan jumlah kota di tiap kawasan regional (Region)!
+Tampilkan hanya kawasan di Benua Asia dan Eropa, serta tambahkan nomor sesuai jumlah kawasan regional di tiap benua (Continent)!
+Gunakan tabel City dan Country!
+Perhatikan contoh hasilnya seperti di bawah ini! */
+with tabel_kota as (
+    select count(distinct name) as jumlah_kota, countrycode
+    from city
+    GROUP BY countrycode)
+select sum(t1.jumlah_kota) jumlah_kota, t2.region region,
+ROW_NUMBER() over(partition by t2.continent) as no
+from tabel_kota t1 join country t2
+on t1.countrycode=t2.code
+group by t2.region, t2.continent
+having t2.continent in ('Asia', 'Europe')
+
+SELECT  country.continent, 
+        country.region AS region,
+        round(count(city.name), 1) AS jumlah_kota,
+        ROW_NUMBER() OVER(PARTITION BY continent)
+FROM city
+JOIN country
+ON city.countrycode = country.code
+GROUP BY continent, region
+HAVING continent = 'Asia' OR continent = 'Europe'
+
+/*Untuk menyusun strategi global, sebuah multinational company membutuhkan data peringkat benua berdasarkan jumlah populasi warga ibukota dan peringkat benua berdasarkan rata-rata GNP semua negara di benua tersebut.
+• Tulis query SQL dari tabel yang tersedia database World untuk mendapatkan output tabel seperti di bawah ini!
+• Menurut analisis Anda, benua manakah yang perlu diprioritaskan untuk pemasaran produk perusahaan?*/
+select t2.continent, sum(t1.population),
+rank() over(order by sum(t1.population) desc),
+avg(t2.gnp),
+rank() over(order by avg(t2.gnp) desc)
+from city t1 join country t2
+on t1.id = t2.capital
+group by t2.continent
+order by 3,5
+
+
+
+with tabel as(select name, gnp/sum(gnp) over()*100 percentage_gnp, gnp,
+(sum(gnp) over(rows BETWEEN UNBOUNDED PRECEDING and current row))/(sum(gnp) over()) as cum_perc,
+sum(gnp) over(),
+gnp/sum(gnp) over(rows BETWEEN UNBOUNDED PRECEDING and current row) percentage_gnp2
+from country
+order by gnp desc)
+select *, dense_rank() over(order by percentage_gnp desc),
+ntile(4) over()
+ from tabel where cum_perc<0.8

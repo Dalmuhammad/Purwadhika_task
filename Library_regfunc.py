@@ -49,14 +49,19 @@ def continue_yes_no(statement_):
             print("Invalid input, please answer with 'yes' or 'no'.")
 
 # %%
-def option_number(lower_,upper_,statement_):
-    choice = int(input(statement_))
-    while choice<lower_ or choice>upper_:
-        print('The number is not available, please choose based on the list')
-        if continue_yes_no('Would you like to try again? (yes/no)')==0:
+def option_number(lower_, upper_, statement_):
+    while True:
+        try:
+            choice = int(input(statement_))
+            if lower_ <= choice <= upper_:
+                return choice
+            else:
+                print('The number is not available, please choose based on the list.')
+        except ValueError:
+            print('Invalid input. Please enter an integer.')
+
+        if continue_yes_no('Would you like to try again? (yes/no)') == 0:
             break
-        choice= int(input(statement_))
-    return choice
 
 # %%
 def list_all(dict_):
@@ -166,68 +171,82 @@ def display_by_filter():
 
 # %%
 def borrow_book_filter(filter_, filter_list, optional_filter=None):
-    keys=list(dict_book.keys())
+    keys = list(dict_book.keys())
+    
     while True:
-        input_item = int(input(f"Input {filter_} that you want to borrow: ")) if filter_=='ID'\
-            else input(f"Input the {filter_} book that you want to borrow: ").lower()
-        if input_item not in filter_list:
-            print(f"{filter_} is not available")
-            if continue_yes_no(f"Do you still want to borrow the book by {filter_}? (yes/no) ")==0:
-                break
-        else:
-            if filter_=='ID':
-                borr_id = input_item
+        try:
+            if filter_ == 'ID':
+                input_item = int(input(f"Input {filter_} that you want to borrow: "))
             else:
-                index_ = filter_list.index(input_item)
-                borr_id = keys[index_]
-            
-            if optional_filter:
-                dict_borr_filter = optional_filter(dict_book,filter_,index_+1)
-                keys_borr_filter = list(dict_borr_filter.keys())
-                print("\n List of book:")
-                display_book(dict_borr_filter)
-                borr_number = option_number(1,len(keys_borr_filter),"Input the number corresponding the book that you want to borrow: ")
-                if 1<=borr_number<=len(keys_borr_filter):
-                    borr_id = keys_borr_filter[borr_number-1]
-                        
+                input_item = input(f"Input the {filter_} book that you want to borrow: ").lower()
 
-            print("\n Detail book: ")
-            display_book({borr_id: dict_book[borr_id]})
-
-            if dict_book[borr_id]['qty']<=0:
-                print("This book is out of stock.")
-                break
-            
-            keys_user = list(user_borrow.keys())
-            if borr_id in keys_user:
-                print("This book is already in your borrowed list and cannot be added to the cart.")
-                break
-                        
-            if continue_yes_no("Are you sure want to borrow this book? (yes/no)")==0:
-                if continue_yes_no(f"Do you still want to borrow the book by the {filter_}? (yes/no) ")==0:
+            if input_item not in filter_list:
+                print(f"{filter_} is not available")
+                if continue_yes_no(f"Do you still want to borrow the book by {filter_}? (yes/no) ") == 0:
                     break
+            else:
+                if filter_ == 'ID':
+                    borr_id = input_item
                 else:
-                    continue
+                    index_ = filter_list.index(input_item)
+                    borr_id = keys[index_]
 
-            total_day = int(input("For how many days would you like to borrow the book? "))
-            while total_day < 1 or total_day > 14:
-                print("The borrowing period must be between 1 and 14 days.")
-                total_day = int(input("Please enter a valid number of days (1-14): "))
-            borr_fee = max(0, 1000 * (total_day - 7))
+                if optional_filter:
+                    dict_borr_filter = optional_filter(dict_book, filter_, index_ + 1)
+                    keys_borr_filter = list(dict_borr_filter.keys())
+                    print("\n List of books:")
+                    display_book(dict_borr_filter)
+                    borr_number = option_number(1, len(keys_borr_filter), "Input the number corresponding to the book that you want to borrow: ")
+                    if 1 <= borr_number <= len(keys_borr_filter):
+                        borr_id = keys_borr_filter[borr_number - 1]
 
-            borr_date = date.today()
-            return_date = borr_date +timedelta(days=total_day)
+                print("\n Detail of the book: ")
+                display_book({borr_id: dict_book[borr_id]})
 
-            user_borrow[borr_id] = {'title':dict_book[borr_id]['title'],
-                                        'author':dict_book[borr_id]['author'],
-                                        'year':dict_book[borr_id]['year'],
-                                        'genre':dict_book[borr_id]['genre'],
-                                        'borr_date':borr_date,
-                                        'return_date':return_date,
-                                        'borr_fee':borr_fee,
-                                        'status':'Pending'}
-            
-            break
+                if dict_book[borr_id]['qty'] <= 0:
+                    print("This book is out of stock.")
+                    break
+
+                keys_user = list(user_borrow.keys())
+                if borr_id in keys_user:
+                    print("This book is already in your borrowed list and cannot be added to the cart.")
+                    break
+
+                if continue_yes_no("Are you sure you want to borrow this book? (yes/no)") == 0:
+                    if continue_yes_no(f"Do you still want to borrow the book by the {filter_}? (yes/no)") == 0:
+                        break
+                    else:
+                        continue
+
+                while True:
+                    try:
+                        total_day = int(input("For how many days would you like to borrow the book? "))
+                        if 1 <= total_day <= 14:
+                            break
+                        else:
+                            print("The borrowing period must be between 1 and 14 days.")
+                    except ValueError:
+                        print("Invalid input. Please enter a valid number.")
+
+                borr_fee = max(0, 1000 * (total_day - 7))
+                borr_date = date.today()
+                return_date = borr_date + timedelta(days=total_day)
+
+                user_borrow[borr_id] = {
+                    'title': dict_book[borr_id]['title'],
+                    'author': dict_book[borr_id]['author'],
+                    'year': dict_book[borr_id]['year'],
+                    'genre': dict_book[borr_id]['genre'],
+                    'borr_date': borr_date,
+                    'return_date': return_date,
+                    'borr_fee': borr_fee,
+                    'status': 'Pending'
+                }
+
+                break
+
+        except ValueError:
+            print(f"Invalid input. Please enter a valid number for {filter_}.")
 
 # %%
 def borrowing_book():
@@ -259,52 +278,67 @@ def borrowing_book():
             break
 
 # %%
-def del_book_filter(status, dict_,filter_, filter_list, optional_filter=None):
-    if len(dict_)==0:
+def del_book_filter(status, dict_, filter_, filter_list, optional_filter=None):
+    if len(dict_) == 0:
         print("There are no books available for deletion.")
         return
-    disp_function = display_book if status=='admin' else borrowing_details
-    if continue_yes_no(f"Do you want to display list of {filter_}? (yes/no)") == 1:
+    
+    disp_function = display_book if status == 'admin' else borrowing_details
+
+    if continue_yes_no(f"Do you want to display the list of {filter_}? (yes/no)") == 1:
         print(f"List of {filter_}:")
         print(f"{'No':^4} | {filter_.upper():<15}")
         for i in range(len(filter_list)):
             print(f"{i+1:^4} | {filter_list[i]:<15}")
+
     while True:
-        keys = list(dict_.keys())
-        input_item = int(input(f"Input {filter_} that you want to delete: ")) if filter_=='ID'\
-            else input(f"Input the {filter_} book that you want to delete: ").lower()
-        if input_item not in filter_list:
-            print(f"{filter_} is not available")
-            if continue_yes_no(f"Do you still want to delete the book by {filter_}? (yes/no) ")==0:
-                break
-        else:
-            if filter_=='ID': 
-                del_id = input_item
+        try:
+            keys = list(dict_.keys())
+
+            if filter_ == 'ID':
+                input_item = int(input(f"Input {filter_} that you want to delete: "))
             else:
-                index_ = filter_list.index(input_item)
-                del_id = keys[index_]
-            if optional_filter:
-                dict_del_filter = optional_filter(dict_,filter_,index_+1)
-                keys_del_filter = list(dict_del_filter.keys())
-                if len(dict_del_filter)>1:
-                    print("\n List of book:")
-                    disp_function(dict_del_filter)
-                    del_number = option_number(1,len(keys_del_filter),"Input the number corresponding the book that you want to delete: ")
-                    if 1<=del_number<=len(keys_del_filter):
-                        del_id = keys_del_filter[del_number-1]
+                input_item = input(f"Input the {filter_} book that you want to delete: ").lower()
 
-            print("\n Detail book: ")
-            disp_function({del_id: dict_[del_id]})
-
-            if continue_yes_no("Are you sure want to delete this book? (yes/no)")==0:
-                if continue_yes_no(f"Do you still want to delete the book by the {filter_}? (yes/no) ")==0:
+            if input_item not in filter_list:
+                print(f"{filter_} is not available")
+                if continue_yes_no(f"Do you still want to delete the book by {filter_}? (yes/no)") == 0:
                     break
+            else:
+                if filter_ == 'ID':
+                    del_id = input_item
                 else:
-                    continue
-                        
-            del dict_[del_id]
+                    index_ = filter_list.index(input_item)
+                    del_id = keys[index_]
 
-            break
+                if optional_filter:
+                    dict_del_filter = optional_filter(dict_, filter_, index_ + 1)
+                    keys_del_filter = list(dict_del_filter.keys())
+
+                    if len(dict_del_filter) > 1:
+                        print("\n List of books:")
+                        disp_function(dict_del_filter)
+                        del_number = option_number(1, len(keys_del_filter), "Input the number corresponding to the book that you want to delete: ")
+                        if 1 <= del_number <= len(keys_del_filter):
+                            del_id = keys_del_filter[del_number - 1]
+
+                print("\n Detail of the book: ")
+                disp_function({del_id: dict_[del_id]})
+
+                if continue_yes_no("Are you sure you want to delete this book? (yes/no)") == 0:
+                    if continue_yes_no(f"Do you still want to delete the book by the {filter_}? (yes/no)") == 0:
+                        break
+                    else:
+                        continue
+
+                del dict_[del_id]
+                print("The book has been successfully deleted.")
+
+                break
+
+        except ValueError:
+            print(f"Invalid input. Please enter a valid number for {filter_}.")
+
 
 # %%
 def deleting_book(status_, dict_):
@@ -351,21 +385,43 @@ def check_status(dict_):
 def add_book():
     title_book = input("What is the title of your book? ")
     author_book = input("Who is the first author's name? ")  
-    genre_book = input("What is the genre's book? ")
-    year_book = int(input("When is the book published? "))
-    qty_book = int(input("How many pcs you want to input? "))
+    genre_book = input("What is the genre of the book? ")
+    
+    while True:
+        try:
+            year_book = int(input("When was the book published? "))
+            break
+        except ValueError:
+            print("Invalid input. Please enter a valid year.")
+
+    while True:
+        try:
+            qty_book = int(input("How many copies do you want to input? "))
+            break
+        except ValueError:
+            print("Invalid input. Please enter a valid quantity (number).")
+
     title_author_year = list((book['title'].lower(), book['author'].lower(), book['year']) for book in dict_book.values())
-    tuple_tay = (title_book.lower(),author_book.lower(),year_book)
+    tuple_tay = (title_book.lower(), author_book.lower(), year_book)
     keys = list(dict_book.keys())
+    
     global last_id
-    last_id +=1
+    last_id += 1
+    
     if tuple_tay in title_author_year:
         index_tuple = title_author_year.index(tuple_tay)
-        dict_book[keys[index_tuple]]['qty']+=qty_book
-        print("The books have been added")
+        dict_book[keys[index_tuple]]['qty'] += qty_book
+        print("The books have been added to the existing record.")
     else:
-        dict_book[last_id]= {'title':title_book.capitalize(), 'author':author_book.capitalize(),'qty':qty_book,'genre':genre_book,'rating':5,'year':year_book}
-        print("The books have been added")
+        dict_book[last_id] = {
+            'title': title_book.capitalize(), 
+            'author': author_book.capitalize(),
+            'qty': qty_book, 
+            'genre': genre_book, 
+            'rating': 5, 
+            'year': year_book
+        }
+        print("The new book has been added.")
 
 # %%
 def change_option(book_id):
@@ -383,55 +439,70 @@ def change_option(book_id):
             new_title = input("Input the new title: ")
             dict_book[book_id]['title'] = new_title
             print(f"Title has been updated to '{new_title}'.")
-        
+    
         elif opt_ == '2':
             new_author = input("Input the new author: ")
             dict_book[book_id]['author'] = new_author
             print(f"Author has been updated to '{new_author}'.")
-        
+
         elif opt_ == '3':
-            new_year = input("Input the new year: ")
-            dict_book[book_id]['year'] = new_year
-            print(f"Year has been updated to '{new_year}'.")
-        
+            while True:
+                try:
+                    new_year = int(input("Input the new year: "))
+                    dict_book[book_id]['year'] = new_year
+                    print(f"Year has been updated to '{new_year}'.")
+                    break
+                except ValueError:
+                    print("Invalid input! Please enter a valid year.")
+
         elif opt_ == '4':
             new_genre = input("Input the new genre: ")
             dict_book[book_id]['genre'] = new_genre
             print(f"Genre has been updated to '{new_genre}'.")
-        
+
         elif opt_ == '5':
-            new_quantity = int(input("Input the new quantity: "))
-            dict_book[book_id]['qty'] = new_quantity
-            print(f"Quantity has been updated to '{new_quantity}'.")
-        
+            while True:
+                try:
+                    new_quantity = int(input("Input the new quantity: "))
+                    dict_book[book_id]['qty'] = new_quantity
+                    print(f"Quantity has been updated to '{new_quantity}'.")
+                    break
+                except ValueError:
+                    print("Invalid input! Please enter a valid quantity.")
+
         else:
             print("Invalid option. Please try again.")
             continue
         
-        if continue_yes_no("Would you like to modify another attribute? (yes/no) ")==0:
+        if continue_yes_no("Would you like to modify another attribute? (yes/no) ") == 0:
             print("Modification completed.")
             break
-
 
 # %%
 def change_detail():
     keys = list(dict_book.keys())
     print(f"\nList of Book ID : \n{keys}\n")
     while True:
-        book_id = int(input("Input Book ID that you want to modify :"))
-        while book_id not in keys:
-            print("Invalid Book ID!")
-            if continue_yes_no("Do you want to input another Book ID ? (yen/no) ")==0:
-                break
-            book_id = int(input("Input Book ID that you want to modify :"))
-        else:
-            print("Book's information:")
-            display_book({book_id:dict_book[book_id]})
-            print("")
-            if continue_yes_no("Do you want to modify this book ? (yes/no)")==1:
-                change_option(book_id)
-            
-        if continue_yes_no("Do you want to modify another book? (yes/no) ")==0:
+        while True:
+            try:
+                book_id = int(input("Input Book ID that you want to modify: "))
+                if book_id not in keys:
+                    print("Invalid Book ID!")
+                    if continue_yes_no("Do you want to input another Book ID? (yes/no) ") == 0:
+                        return
+                else:
+                    break
+            except ValueError:
+                print("Invalid input! Please enter a valid numeric Book ID.")
+
+        print("Book's information:")
+        display_book({book_id: dict_book[book_id]})
+        print("")
+
+        if continue_yes_no("Do you want to modify this book? (yes/no)") == 1:
+            change_option(book_id)
+
+        if continue_yes_no("Do you want to modify another book? (yes/no)") == 0:
             break
 
 # %%
@@ -447,7 +518,7 @@ def finalizing_(dict_, dict_2):
     else:
         view_item_cart(dict_)
         total_borr_fee = sum([value_dict['borr_fee'] for value_dict in dict_.values()])
-        print(f"\nTotal borrowing fee = {total_borr_fee}.\nThe borrowing fee can be paid when returning the book")
+        print(f"\nTotal borrowing fee = {total_borr_fee}.\nThe borrowing fee is only payable upon returning the book.")
         if continue_yes_no("Do you want to proceed ? (yes/no)")==0:
             return [dict_, dict_2]
         else:
@@ -466,7 +537,10 @@ def finalizing_(dict_, dict_2):
                 del dict_[book_id]
             
             dict_2 = update_dict(dict_2,dict_)
-            dict_ = {}
+            
+            for key in list(dict_.keys()):
+                del dict_[key]
+            
         total_borr_fee_2 = sum([value_dict['borr_fee'] for value_dict in dict_2.values()])
         if total_borr_fee!=total_borr_fee_2:
             print(f"\nUpdate!\nTotal borrowing fee = {total_borr_fee_2}.\nThe borrowing fee can be paid when returning the book.")
@@ -480,49 +554,66 @@ def finalize_borrow(dict_,dict_2):
 
 # %%
 def returning_menu():
-    dict_=user_borrow2
+    dict_ = user_borrow2
     today = date.today()
-    if len(dict_)==0:
+
+    if len(dict_) == 0:
         print("There is no active borrowing.")
     else:
         list_id = list(dict_.keys())
         view_active_menu()
-        total_books = int(input("How many book you want to return : "))
-        while total_books<1 or total_books>len(dict_):
-            print(f"Invalid input!")
-            total_books = int(input("How many book you want to return : "))
-        
+
+        while True:
+            try:
+                total_books = int(input("How many books do you want to return: "))
+                if total_books < 1 or total_books > len(dict_):
+                    print(f"Invalid input! Please enter a number between 1 and {len(dict_)}.")
+                else:
+                    break
+            except ValueError:
+                print("Invalid input! Please enter a valid number.")
+
         list_book_id = []
         for i in range(total_books):
             while True:
-                book_id = int(input(f"Input ID (Book {i+1}): "))
-                if book_id in list_id and book_id not in list_book_id:
-                    list_book_id.append(book_id)
-                    break
-                elif book_id in list_book_id:
-                    print("You have entered this ID before")
-                else:
-                    print("Invalid ID!") 
+                try:
+                    book_id = int(input(f"Input ID (Book {i+1}): "))
+                    if book_id in list_id and book_id not in list_book_id:
+                        list_book_id.append(book_id)
+                        break
+                    elif book_id in list_book_id:
+                        print("You have entered this ID before.")
+                    else:
+                        print("Invalid ID!")
+                except ValueError:
+                    print("Invalid input! Please enter a valid numeric ID.")
 
-        dict_del = {id_:dict_[id_] for id_ in list_book_id}
+        dict_del = {id_: dict_[id_] for id_ in list_book_id}
         total_fee = 0
         for id_ in list_book_id:
-            diff_day = (today-dict_del[id_]['return_date']).days
-            dict_del[id_]['late_fee'] = min(max(0, diff_day*2000),1000000)
-            total_f = dict_del[id_]['borr_fee']+dict_del[id_]['late_fee']
+            diff_day = (today - dict_del[id_]['return_date']).days
+            dict_del[id_]['late_fee'] = min(max(0, diff_day * 2000), 1000000)
+            total_f = dict_del[id_]['borr_fee'] + dict_del[id_]['late_fee']
             total_fee += total_f
 
         print("")
         returning_details(dict_del)
         print(f"Total fee = {total_fee}")
-        if continue_yes_no("Are you sure want to return this/these book(s)? (yes/no) ")==1:
-            money = int(input('Enter the amount of money: '))
-            while money<total_fee:
-                print(f'Your money is less than {total_fee-money}')
-                money = int(input('Enter the amount of money: '))
+
+        if continue_yes_no("Are you sure you want to return this/these book(s)? (yes/no) ") == 1:
+            while True:
+                try:
+                    money = int(input('Enter the amount of money: '))
+                    if money >= total_fee:
+                        break
+                    else:
+                        print(f'Your money is less than {total_fee - money}.')
+                except ValueError:
+                    print("Invalid input! Please enter a valid amount.")
+
             print("Payment successful.")
-            if money>total_fee:
-                print(f'\nYour money back: {money-total_fee}')
+            if money > total_fee:
+                print(f'\nYour change: {money - total_fee}')
 
             for id_ in list_book_id:
                 del dict_[id_]
@@ -667,5 +758,3 @@ reset_dict()
 
 # %%
 main_menu()
-
-
