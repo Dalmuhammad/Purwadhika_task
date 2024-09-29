@@ -104,7 +104,7 @@ def borrowing_details(input_dict):
 # %%
 def returning_details(input_dict):
     number = 0
-    print(f"{'No':^4}| {'Book ID':^8} | {'Title':^30} | {'Borrowing date':^15} | {'Returning date':^15} | {'Borrowing fee':15} | | {'Late fee':15}")
+    print(f"{'No':^4}| {'Book ID':^8} | {'Title':^30} | {'Borrowing date':^15} | {'Returning date':^15} | {'Borrowing fee':^15} | {'Late fee':^15}")
     for key_disp, val_disp in input_dict.items():
         number+=1
         borr_date = val_disp['borr_date'].strftime('%d-%m-%Y')
@@ -406,13 +406,13 @@ def add_book():
     keys = list(dict_book.keys())
     
     global last_id
-    last_id += 1
     
     if tuple_tay in title_author_year:
         index_tuple = title_author_year.index(tuple_tay)
         dict_book[keys[index_tuple]]['qty'] += qty_book
         print("The books have been added to the existing record.")
     else:
+        last_id += 1
         dict_book[last_id] = {
             'title': title_book.capitalize(), 
             'author': author_book.capitalize(),
